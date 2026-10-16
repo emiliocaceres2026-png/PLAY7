@@ -27,6 +27,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install telethon cryptg
 
+      - name: Restaurar archivo de sesion
+        env:
+          SESSION_DATA: ${{ secrets.TELETHON_SESSION_BASE64 }}
+        run: |
+          if [ -n "$SESSION_DATA" ]; then
+            echo "$SESSION_DATA" | base64 --decode > sesion_nueva_prueba_2.session
+            echo "✅ Archivo sesion_nueva_prueba_2.session restaurado con exito"
+          else
+            echo "❌ No se encontro el Secret TELETHON_SESSION_BASE64"
+          fi
+
       - name: Ejecutar PLAY7.py
         run: |
           python -u PLAY7.py
