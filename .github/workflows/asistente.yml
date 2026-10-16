@@ -1,4 +1,4 @@
-name: Ejecutar Asistente Premium Telethon
+name: Ejecutar Asistente PLAY7
 
 on:
   workflow_dispatch:
@@ -27,6 +27,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install telethon cryptg
 
-      - name: Ejecutar Asistente
+      - name: Ejecutar PLAY7.py
         run: |
-          python -u asistente_premium.py
+          python -u PLAY7.py
