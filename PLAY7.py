@@ -23,7 +23,7 @@ E_REGALO = '<tg-emoji emoji-id="5215668908278686541">🎁</tg-emoji>'
 E_ADN2 = '<tg-emoji emoji-id="5215673679987355184">🧬</tg-emoji>'
 E_DIAMANTE = '<tg-emoji emoji-id="6059684519437405439">💎</tg-emoji>'
 
-# Rutas adaptadas para Linux y Windows (relativas al proyecto)
+# Rutas adaptadas al entorno de GitHub Actions (relativas)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ARCHIVO_REGISTRO_CLIENTES = os.path.join(BASE_DIR, "clientes_atendidos.json")
 CARPETA_AUDIO_DUDA = os.path.join(BASE_DIR, "AUDIO_DUDA")
@@ -74,7 +74,7 @@ async def tarea_escanear_mensajes_privados():
                             continue
 
                     # ==========================================
-                    # FASE 0: Detectar palabras de inicio -> Bienvenida
+                    # FASE 0: Detectar palabras de inicio -> Enviar texto de bienvenida
                     # ==========================================
                     if fase_actual == 0:
                         async for message in client.iter_messages(dialog.entity, limit=1):
@@ -89,7 +89,7 @@ async def tarea_escanear_mensajes_privados():
                                     }
                                     guardar_registro_clientes()
 
-                                    print(f"📩 Palabra de inicio de ({username or user_id_str}). Enviando bienvenida...")
+                                    print(f"📩 Palabra de inicio detectada de ({username or user_id_str}). Enviando bienvenida...")
                                     texto_bienvenida = (
                                         f"{E_ESTRELLA}<b>HOLA</b>{E_ESTRELLA}\n"
                                         f"{E_ESTRELLA}<b>MUCHO GUSTO MI NOMBRE ES</b>{E_ESTRELLA}\n\n"
@@ -101,11 +101,11 @@ async def tarea_escanear_mensajes_privados():
                                         f"{E_ESTRELLA}<b>LUCKY JET</b> {E_ESTRELLA}"
                                     )
                                     await client.send_message(dialog.entity, texto_bienvenida, parse_mode='html')
-                                    print(f"✨ Bienvenida enviada a: {username or user_id_str}")
+                                    print(f"✨ Mensaje de bienvenida oficial enviado a: {username or user_id_str}")
                                 break
 
                     # ==========================================
-                    # FASE 1: Pedir audio de presentacion
+                    # FASE 1: Tras el texto de bienvenida -> Pedir audio
                     # ==========================================
                     elif fase_actual == 1:
                         async for message in client.iter_messages(dialog.entity, limit=1):
@@ -146,7 +146,7 @@ async def tarea_escanear_mensajes_privados():
                                 break
 
                     # ==========================================
-                    # FASE 3: Terminos y condiciones
+                    # FASE 3: Confirmar recarga -> Términos y condiciones
                     # ==========================================
                     elif fase_actual == 3:
                         async for message in client.iter_messages(dialog.entity, limit=1):
@@ -161,11 +161,11 @@ async def tarea_escanear_mensajes_privados():
                                     f"<b>ESTÁS TOTALMENTE DE ACUERDO</b> {E_BOLSA} <b>POR FAVOR ME CONFIRMAS. GRACIAS</b> {E_REGALO}"
                                 )
                                 await client.send_message(dialog.entity, texto_terminos, parse_mode='html')
-                                print(f"✨ Terminos enviados a: {username or user_id_str}")
+                                print(f"✨ Términos y condiciones enviados a: {username or user_id_str}")
                                 break
 
                     # ==========================================
-                    # FASE 4: Solicitar usuario y contraseña
+                    # FASE 4: Tras aceptar términos -> Pedir usuario y contraseña
                     # ==========================================
                     elif fase_actual == 4:
                         async for message in client.iter_messages(dialog.entity, limit=1):
@@ -186,7 +186,7 @@ async def tarea_escanear_mensajes_privados():
                                 break
 
                     # ==========================================
-                    # FASE 5: Bifurcacion (Duda vs Credenciales)
+                    # FASE 5: Bifurcación (Dudas vs Datos)
                     # ==========================================
                     elif fase_actual == 5:
                         async for message in client.iter_messages(dialog.entity, limit=1):
@@ -202,11 +202,11 @@ async def tarea_escanear_mensajes_privados():
                                         if archivos:
                                             ruta_audio = os.path.join(CARPETA_AUDIO_DUDA, archivos[0])
                                             await client.send_file(dialog.entity, ruta_audio, voice_note=True)
-                                            print(f"🎤 Nota de voz enviada: {archivos[0]}")
+                                            print(f"🎤 Nota de voz ({archivos[0]}) enviada con éxito.")
                                             audio_enviado = True
 
                                     if not audio_enviado:
-                                        print(f"⚠️ No hay audios en la carpeta '{CARPETA_AUDIO_DUDA}'.")
+                                        print(f"⚠️ [Aviso] No se encontró ningún archivo de audio en '{CARPETA_AUDIO_DUDA}'.")
                                     break
 
                                 es_correo = any(dominio in texto_cliente for dominio in dominios_correo)
@@ -226,7 +226,7 @@ async def tarea_escanear_mensajes_privados():
                                         f"<b>GANANCIAS</b> {E_BOLSA} <b>QUE ESTEMOS INCREMENTANDO. GRACIAS ASÍ QUE POR FAVOR CUANDO DESCONECTES TU CUENTA ME CONFIRMAS PARA PODER COMENZAR.</b> {E_BOLSA}"
                                     )
                                     await client.send_message(dialog.entity, texto_saldo, parse_mode='html')
-                                    print(f"✨ Instrucciones enviadas a: {username or user_id_str}")
+                                    print(f"✨ Instrucciones de cuenta desconectada enviadas a: {username or user_id_str}")
                                     break
 
         except Exception as e:
@@ -237,12 +237,12 @@ async def tarea_escanear_mensajes_privados():
 async def main():
     await client.connect()
     if not await client.is_user_authorized():
-        print("❌ Error: 'sesion_nueva_prueba.session' no existe o no está autorizada.")
-        print("Debes generar la sesión en tu PC y subir el archivo al repositorio.")
+        print("❌ Error crítico: 'sesion_nueva_prueba.session' no existe o no está autorizada.")
+        print("Asegúrate de subir el archivo 'sesion_nueva_prueba.session' a la raíz del repositorio.")
         sys.exit(1)
 
     yo = await client.get_me()
-    print(f"✅ Conectado como: {yo.first_name} (@{yo.username}) - ID: {yo.id}")
+    print(f"✅ CONECTADO CON ÉXITO: {yo.first_name} (@{yo.username}) - ID: {yo.id}")
     print("🚀 ASISTENTE PRIVADO ACTIVO Y ESCANEANDO")
     await tarea_escanear_mensajes_privados()
 
