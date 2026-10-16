@@ -1,11 +1,13 @@
 import time
+import random
 import asyncio
 import os
 import json
-from telethon import TelegramClient, events
+from datetime import datetime, timedelta
+from telethon import TelegramClient
 
-API_ID = 30776682
-API_HASH = 'd2e9ad1c3dda250716a24a73d77ae6a6'
+API_ID = 30370336
+API_HASH = '3997f17c527e08b887ea3a0679c9c121'
 
 # --- EMOJIS PREMIUM OFICIALES DEL PROYECTO ---
 E_ESTRELLA = '<tg-emoji emoji-id="5370784581341422520">⭐️</tg-emoji>'
@@ -24,7 +26,8 @@ path = os.path.expanduser("~/Desktop/asistente_premium")
 os.makedirs(path, exist_ok=True)
 ARCHIVO_REGISTRO_CLIENTES = os.path.join(path, "clientes_atendidos.json")
 
-CARPETA_AUDIO = r"C:\Users\carls\Desktop\AUDIO BIENVENIDO"
+# Rutas exactas de tus carpetas de audios
+CARPETA_AUDIO_DUDA = r"C:\Users\carls\Desktop\AUDIO DUDA"
 
 if os.path.exists(ARCHIVO_REGISTRO_CLIENTES):
     with open(ARCHIVO_REGISTRO_CLIENTES, "r", encoding="utf-8") as f:
@@ -39,308 +42,203 @@ def guardar_registro_clientes():
     with open(ARCHIVO_REGISTRO_CLIENTES, "w", encoding="utf-8") as f:
         json.dump(clientes_atendidos, f, indent=4, ensure_ascii=False)
 
-client = TelegramClient(os.path.join(path, "sesion_nueva_prueba_2"), API_ID, API_HASH)
+client = TelegramClient(os.path.join(path, "sesion_nueva_prueba"), API_ID, API_HASH)
 
-palabras_inicio = ["hola", "hola me interesa", "hola quiero ganar", "estoy interesado", "deseo informacion", "informacion"]
-palabras_audio_bienvenida = ["aviator", "spaceman", "lucky jet", "si estoy de acuerdo", "de acuerdo", "si me interesa", "si me parece bien", "esta bien de acuerdo", "juego en aviator"]
-palabras_recarga_lista = ["ya recargué", "ya recargue", "ya tengo la recarga", "ya estoy listo", "listo", "ya hice la recarga", "ya recargé mi cuenta"]
-palabras_acuerdo_terminos = ["si señor de acuerdo", "si estoy de acuerdo", "de acuerdo", "si estoy de acuerdo con usted", "confirmando los terminos", "estoy de acuerdo", "conforme", "si acepto"]
+async def tarea_escanear_mensajes_privados():
+    print("🤖 Escáner activo de chats privados con palabras clave de bienvenida iniciado...")
 
-@client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
-async def manejador_mensajes(event):
-    try:
-        remitente = await event.get_sender()
-        if not remitente or remitente.bot:
-            return
+    palabras_inicio = ["hola", "hola me interesa", "hola quiero ganar", "estoy interesado", "deseo informacion", "informacion"]
+    palabras_duda = ["duda", "miedo", "inconfiable", "no puedo", "no", "como así", "como asi", "desconfio", "inseguro", "inseguridad", "estafa", "falso", "datos", "contra", "contraseña", "por que", "por qué", "como se", "cómo se"]
+    dominios_correo = ["@gmail", "@hotmail", "@outlook", "@yahoo", "@icloud"]
 
-        user_id_str = str(remitente.id)
-        username = f"@{remitente.username}" if remitente.username else ""
-        texto_cliente = event.raw_text.lower().strip() if event.raw_text else ""
-        es_audio = bool(event.message.voice or event.message.audio)
-
-        estado_usuario = clientes_atendidos.get(user_id_str, {"fase": 0})
-        fase_actual = estado_usuario.get("fase", 0)
-
-        # ==========================================
-        # FASE 0: Detectar palabras de inicio ➡️ Bienvenida oficial
-        # ==========================================
-        if fase_actual == 0:
-            coincide_inicio = any(p in texto_cliente for p in palabras_inicio)
-            if coincide_inicio:
-                clientes_atendidos[user_id_str] = {
-                    "fase": 1,
-                    "fecha": time.strftime("%Y-%m-%d %H:%M:%S")
-                }
-                guardar_registro_clientes()
-
-                texto_bienvenida = (
-                    f"{E_ESTRELLA}<b>HOLA</b>{E_ESTRELLA}\n"
-                    f"{E_ESTRELLA}<b>MUCHO GUSTO MI NOMBRE ES</b>{E_ESTRELLA}\n\n"
-                    f"<b>WILLIAM ROBERT</b>\n\n"
-                    f"{E_REGALO}<b>TE COMENTO CÓMO TRABAJAMOS,</b> {E_COHETE}<b>Y SÍ TE INTERESA ME CONFIRMAS, NOSOTROS TRABAJAMOS</b> {E_DIAMANTE}{E_DIAMANTE}<b>40%</b> {E_DIAMANTE}{E_DIAMANTE}<b>60%</b> {E_DIAMANTE}<b>DE LAS GANANCIAS QUE SE OBTENGAN YA QUE TRABAJAMOS CON APLICACIONES PREDICTOR QUE NOS INDICAN CADA SECUENCIA Y CADA ALGORITMO QUE ESTEMOS LLEVANDO A CABO YA QUE MANEJAMOS RESULTADOS</b> {E_DIAMANTE}<b>100%</b>{E_DIAMANTE}<b>EFECTIVOS SI TE INTERESA TRABAJAR CON NOSOTROS ME CONFIRMA</b>{E_ESTRELLA}\n\n\n"
-                    f"{E_DIVISAS}<b>PRIMERO GANAS LUEGO PAGAS MANEJAMOS UN RESULTADO 100% SEGURO Y CONFIABLE</b>{E_DIVISAS}\n\n\n"
-                    f"{E_ESTRELLA}<b>AVIATOR</b> {E_ESTRELLA}\n\n\n"
-                    f"{E_ESTRELLA}<b>SPACEMAN</b> {E_ESTRELLA}\n\n\n"
-                    f"{E_ESTRELLA}<b>LUCKY JET</b> {E_ESTRELLA}"
-                )
-                await event.respond(texto_bienvenida, parse_mode='html')
-
-        # ==========================================
-        # FASE 1: Tras bienvenida ➡️ 45s audio, 30s texto obligatorio
-        # ==========================================
-        elif fase_actual == 1:
-            coincide_palabra = any(p in texto_cliente for p in palabras_audio_bienvenida)
-            if coincide_palabra:
-                clientes_atendidos[user_id_str]["fase"] = 2
-                guardar_registro_clientes()
-                
-                async def secuencia_post_bienvenida():
-                    await asyncio.sleep(45)
-                    audio_encontrado = False
-                    if os.path.exists(CARPETA_AUDIO):
-                        for archivo in os.listdir(CARPETA_AUDIO):
-                            if archivo.lower().endswith(('.ogg', '.mp3', '.m4a', '.wav', '.oga')):
-                                ruta_completa = os.path.join(CARPETA_AUDIO, archivo)
-                                await client.send_file(event.chat_id, ruta_completa, voice_note=True)
-                                audio_encontrado = True
-                                break
+    while True:
+        try:
+            async for dialog in client.iter_dialogs(limit=25):
+                if dialog.is_user:
+                    remitente = dialog.entity
+                    user_id_str = str(remitente.id)
+                    username = f"@{remitente.username}" if remitente.username else ""
                     
-                    await asyncio.sleep(30)
-                    texto_obligatorio = (
-                        f"{E_ESTRELLA}<b>HOLA QUE TAL</b>{E_ESTRELLA}\n\n"
-                        f"{E_ESTRELLA}<b>PRIMERO QUE TODO, PARA PROCEDER ATENDERTE</b>{E_ESTRELLA}\n\n"
-                        f"{E_COHETE}<b>PROCESO OBLIGATORIO</b>{E_COHETE}\n\n\n"
-                        f"{E_ESTRELLA}<b>ENVIAR UN AUDIO</b>{E_ESTRELLA}\n\n"
-                        f"{E_ESTRELLA}<b>PRESENTÁNDOTE</b>{E_ESTRELLA}\n"
-                        f"{E_ESTRELLA}<b>CON TU NOMBRE,</b>{E_ESTRELLA} {E_DIAMANTE}\n"
-                        f"{E_ESTRELLA}<b>TU APELLIDO,</b>{E_ESTRELLA}\n\n"
-                        f"Y\n\n"
-                        f"{E_ESTRELLA}<b>EN QUE PLATAFORMA JUEGAS</b>{E_ESTRELLA}\n\n"
-                        f"{E_ESTRELLA}<b>PARA QUE UNO DE NUESTROS ASESORES PROCEDA ATENDERTE EN UN MOMENTO</b>{E_ESTRELLA}"
-                    )
-                    await client.send_message(event.chat_id, texto_obligatorio, parse_mode='html')
+                    estado_usuario = clientes_atendidos.get(user_id_str, {"fase": 0})
+                    fase_actual = estado_usuario.get("fase", 0)
+                    es_cuenta_de_prueba = (username.lower() in ["@aviatordoi", "@pedritorca"])
 
-                asyncio.create_task(secuencia_post_bienvenida())
+                    if not es_cuenta_de_prueba:
+                        total_mensajes_chat = 0
+                        async for _ in client.iter_messages(dialog.entity, limit=5):
+                            total_mensajes_chat += 1
 
-        # ==========================================
-        # FASE 2: Al recibir el audio de presentación ➡️ Enviar mensaje pidiendo el país
-        # ==========================================
-        elif fase_actual == 2:
-            if es_audio:
-                clientes_atendidos[user_id_str]["fase"] = 25
-                guardar_registro_clientes()
+                        if total_mensajes_chat > 3:
+                            continue
 
-                print(f"🎤 Audio de presentación recibido de ({username or user_id_str}). Solicitando país...")
+                    # ==========================================
+                    # FASE 0: Detectar palabras de inicio ➡️ Enviar texto de bienvenida oficial con emojis 100% premium
+                    # ==========================================
+                    if fase_actual == 0:
+                        async for message in client.iter_messages(dialog.entity, limit=1):
+                            if message and message.text and not message.out:
+                                texto_cliente = message.text.lower().strip()
+                                coincide_inicio = any(p in texto_cliente for p in palabras_inicio)
 
-                texto_pedir_pais = (
-                    f"{E_COHETE} <b>PARA PODER OFRECERTE EL PROCESO DEPENDIENDO DONDE JUEGUES, DIME DE QUE PAIS ERES ASI PODREMOS CONECTARNOS, AHORA PARA QUE EL SISTEMA SEA CONECTADO,</b> {E_ESTRELLA}"
-                )
-                await event.respond(texto_pedir_pais, parse_mode='html')
+                                if coincide_inicio:
+                                    clientes_atendidos[user_id_str] = {
+                                        "fase": 1,
+                                        "fecha": time.strftime("%Y-%m-%d %H:%M:%S")
+                                    }
+                                    guardar_registro_clientes()
 
-        # ==========================================
-        # FASE 2.5: Recibir respuesta de qué país es ➡️ Detectar país, esperar 5s y enviar Tabla completa
-        # ==========================================
-        elif fase_actual == 25:
-            if not event.out:
-                print(f"📩 Respuesta de país recibida: '{texto_cliente}'")
+                                    print(f"📩 Palabra de inicio detectada de ({username or user_id_str}). Enviando mensaje de bienvenida oficial...")
+                                    
+                                    texto_bienvenida = (
+                                        f"{E_ESTRELLA}<b>HOLA</b>{E_ESTRELLA}\n"
+                                        f"{E_ESTRELLA}<b>MUCHO GUSTO MI NOMBRE ES</b>{E_ESTRELLA}\n\n"
+                                        f"<b>WILLIAM ROBERT</b>\n\n"
+                                        f"{E_REGALO}<b>TE COMENTO CÓMO TRABAJAMOS,</b> {E_COHETE}<b>Y SÍ TE INTERESA ME CONFIRMAS, NOSOTROS TRABAJAMOS</b> {E_DIAMANTE}{E_DIAMANTE}<b>40%</b> {E_DIAMANTE}{E_DIAMANTE}<b>60%</b> {E_DIAMANTE}<b>DE LAS GANANCIAS QUE SE OBTENGAN YA QUE TRABAJAMOS CON APLICACIONES PREDICTOR QUE NOS INDICAN CADA SECUENCIA Y CADA ALGORITMO QUE ESTEMOS LLEVANDO A CABO YA QUE MANEJAMOS RESULTADOS</b> {E_DIAMANTE}<b>100%</b>{E_DIAMANTE}<b>EFECTIVOS SI TE INTERESA TRABAJAR CON NOSOTROS ME CONFIRMA</b>{E_ESTRELLA}\n\n\n"
+                                        f"{E_DIVISAS}<b>PRIMERO GANAS LUEGO PAGAS MANEJAMOS UN RESULTADO 100% SEGURO Y CONFIABLE</b>{E_DIVISAS}\n\n\n"
+                                        f"{E_ESTRELLA}<b>AVIATOR</b> {E_ESTRELLA}\n\n\n"
+                                        f"{E_ESTRELLA}<b>SPACEMAN</b> {E_ESTRELLA}\n\n\n"
+                                        f"{E_ESTRELLA}<b>LUCKY JET</b> {E_ESTRELLA}"
+                                    )
+                                    await client.send_message(dialog.entity, texto_bienvenida, parse_mode='html')
+                                    print(f"✨ Mensaje de bienvenida oficial enviado a: {username or user_id_str}")
+                                break
 
-                moneda = "USD"
-                if any(k in texto_cliente for k in ["peru", "perú", "soles", "lima"]):
-                    moneda = "PEN"
-                elif any(k in texto_cliente for k in ["mexico", "méxico", "mexicanos", "mxn"]):
-                    moneda = "MXN"
-                elif any(k in texto_cliente for k in ["colombia", "colombiano", "pesos", "cop"]):
-                    moneda = "COP"
-                elif any(k in texto_cliente for k in ["chile", "chileno", "clp"]):
-                    moneda = "CLP"
-                elif any(k in texto_cliente for k in ["venezuela", "venezolano", "bs", "bolivares", "bolívares"]):
-                    moneda = "VES"
-                elif "usdc" in texto_cliente:
-                    moneda = "USDC"
+                    # ==========================================
+                    # FASE 1: Tras el texto de bienvenida ➡️ Enviar texto pidiendo audio de presentación
+                    # ==========================================
+                    elif fase_actual == 1:
+                        async for message in client.iter_messages(dialog.entity, limit=1):
+                            if message and message.text and not message.out:
+                                clientes_atendidos[user_id_str]["fase"] = 2
+                                guardar_registro_clientes()
 
-                clientes_atendidos[user_id_str]["fase"] = 3
-                clientes_atendidos[user_id_str]["moneda"] = moneda
-                guardar_registro_clientes()
+                                texto_obligatorio = (
+                                    f"{E_ESTRELLA} <b>HOLA QUE TAL</b> {E_ESTRELLA}\n\n"
+                                    f"{E_ESTRELLA} <b>PRIMERO QUE TODO, PARA PROCEDER ATENDERTE</b> {E_ESTRELLA}\n\n"
+                                    f"{E_COHETE} <b>PROCESO OBLIGATORIO</b> {E_COHETE}\n\n"
+                                    f"{E_ESTRELLA} <b>ENVIAR UN AUDIO</b> {E_ESTRELLA}\n\n"
+                                    f"{E_ESTRELLA} <b>PRESENTÁNDOTE</b> {E_ESTRELLA}\n"
+                                    f"{E_ESTRELLA} <b>CON TU NOMBRE,</b> {E_ESTRELLA} {E_COHETE}\n"
+                                    f"{E_ESTRELLA} <b>TU APELLIDO,</b> {E_ESTRELLA}\n\n"
+                                    f"Y\n\n"
+                                    f"{E_ESTRELLA} <b>EN QUE PLATAFORMA JUEGAS</b> {E_ESTRELLA}\n\n"
+                                    f"{E_ESTRELLA} <b>PARA QUE UNO DE NUESTROS ASESORES PROCEDA ATENDERTE EN UN MOMENTO</b> {E_ESTRELLA}"
+                                )
+                                await client.send_message(dialog.entity, texto_obligatorio, parse_mode='html')
+                                print(f"✨ Solicitud de audio de presentación enviada a: {username or user_id_str}")
+                                break
 
-                print(f"🎯 Moneda detectada: {moneda}. Esperando 5 segundos exactos...")
+                    # ==========================================
+                    # FASE 2: Esperando audio de presentación ➡️ Instrucciones de recarga
+                    # ==========================================
+                    elif fase_actual == 2:
+                        async for message in client.iter_messages(dialog.entity, limit=1):
+                            if message and message.voice and not message.out:
+                                clientes_atendidos[user_id_str]["fase"] = 3
+                                guardar_registro_clientes()
 
-                await asyncio.sleep(5)
+                                texto_recarga = (
+                                    f"{E_REGALO} <b>OK PERFECTO MUY BIEN…</b> {E_REGALO} {E_DIVISAS} <b>PROCEDE A RECARGAR TU CUENTA</b> {E_ADN1} <b>DE JUEGO, CON LA INVERSIÓN QUE</b> {E_DIAMANTE} <b>DESEA HACER CUANDO</b> {E_FLECHA} <b>RECARGUES TU CUENTA DE JUEGO</b> {E_ESTRELLA} <b>ME CONFIRMAS PARA NOTIFICARTE</b> {E_BOLSA} <b>LOS SIGUIENTES PASOS A SEGUIR.</b> {E_COHETE} <b>QUEDO ATENTO. MUCHAS GRACIAS</b> {E_REGALO}"
+                                )
+                                await client.send_message(dialog.entity, texto_recarga, parse_mode='html')
+                                print(f"✨ Instrucciones de recarga enviadas a: {username or user_id_str}")
+                                break
 
-                if moneda == "MXN":
-                    texto_inversion = (
-                        f"{E_ESTRELLA} <b>¡Bienvenidos a la nueva oportunidad de inversión!</b> {E_REGALO}\n\n"
-                        f"{E_DIAMANTE} <b>Aquí puedes empezar desde solo $200 MXN y ver crecer tu ganancia hasta x25.</b>\n\n"
-                        f"{E_COHETE} <b>¡Tú eliges cuánto invertir y nosotros te guiamos en el proceso!</b>\n\n\n"
-                        f"{E_BOLSA} <b>TABLA DE INVERSIÓN Y GANANCIA (MÉXICO)</b> {E_BOLSA}\n\n"
-                        f"{E_FLECHA} $200 MXN {E_GAFAS} $5,000 MXN\n\n"
-                        f"{E_FLECHA} $400 MXN {E_GAFAS} $8,400 MXN\n\n"
-                        f"{E_FLECHA} $600 MXN {E_GAFAS} $12,000 MXN\n\n"
-                        f"{E_FLECHA} $1,000 MXN {E_GAFAS} $15,000 MXN\n\n"
-                        f"{E_FLECHA} $2,000 MXN {E_GAFAS} $31,800 MXN\n\n\n"
-                        f"{E_ESTRELLA} <b>Si deseas hacer una inversión más alta, te daré la información al instante.</b> {E_DIAMANTE}"
-                    )
-                elif moneda == "PEN":
-                    texto_inversion = (
-                        f"{E_ESTRELLA} <b>¡Bienvenidos a la nueva oportunidad de inversión!</b> {E_REGALO}\n\n"
-                        f"{E_DIAMANTE} <b>Aquí puedes empezar desde solo S/ 40 PEN y ver crecer tu ganancia hasta x25.</b>\n\n"
-                        f"{E_COHETE} <b>¡Tú eliges cuánto invertir y nosotros te guiamos en el proceso!</b>\n\n\n"
-                        f"{E_BOLSA} <b>TABLA DE INVERSIÓN Y GANANCIA (PERÚ)</b> {E_BOLSA}\n\n"
-                        f"{E_FLECHA} S/ 40 PEN {E_GAFAS} S/ 1,000 PEN\n\n"
-                        f"{E_FLECHA} S/ 80 PEN {E_GAFAS} S/ 1,680 PEN\n\n"
-                        f"{E_FLECHA} S/ 120 PEN {E_GAFAS} S/ 2,400 PEN\n\n"
-                        f"{E_FLECHA} S/ 200 PEN {E_GAFAS} S/ 3,000 PEN\n\n"
-                        f"{E_FLECHA} S/ 400 PEN {E_GAFAS} S/ 6,360 PEN\n\n\n"
-                        f"{E_ESTRELLA} <b>Si deseas hacer una inversión más alta, te daré la información al instante.</b> {E_DIAMANTE}"
-                    )
-                elif moneda == "COP":
-                    texto_inversion = (
-                        f"{E_ESTRELLA} <b>¡Bienvenidos a la nueva oportunidad de inversión!</b> {E_REGALO}\n\n"
-                        f"{E_DIAMANTE} <b>Aquí puedes empezar desde solo $40,000 COP y ver crecer tu ganancia hasta x25.</b>\n\n"
-                        f"{E_COHETE} <b>¡Tú eliges cuánto invertir y nosotros te guiamos en el proceso!</b>\n\n\n"
-                        f"{E_BOLSA} <b>TABLA DE INVERSIÓN Y GANANCIA (COLOMBIA)</b> {E_BOLSA}\n\n"
-                        f"{E_FLECHA} $40,000 COP {E_GAFAS} $1,000,000 COP\n\n"
-                        f"{E_FLECHA} $80,000 COP {E_GAFAS} $1,680,000 COP\n\n"
-                        f"{E_FLECHA} $120,000 COP {E_GAFAS} $2,400,000 COP\n\n"
-                        f"{E_FLECHA} $200,000 COP {E_GAFAS} $3,000,000 COP\n\n"
-                        f"{E_FLECHA} $400,000 COP {E_GAFAS} $6,360,000 COP\n\n\n"
-                        f"{E_ESTRELLA} <b>Si deseas hacer una inversión más alta, te daré la información al instante.</b> {E_DIAMANTE}"
-                    )
-                elif moneda == "CLP":
-                    texto_inversion = (
-                        f"{E_ESTRELLA} <b>¡Bienvenidos a la nueva oportunidad de inversión!</b> {E_REGALO}\n\n"
-                        f"{E_DIAMANTE} <b>Aquí puedes empezar desde solo $10,000 CLP y ver crecer tu ganancia hasta x25.</b>\n\n"
-                        f"{E_COHETE} <b>¡Tú eliges cuánto invertir y nosotros te guiamos en el proceso!</b>\n\n\n"
-                        f"{E_BOLSA} <b>TABLA DE INVERSIÓN Y GANANCIA (CHILE)</b> {E_BOLSA}\n\n"
-                        f"{E_FLECHA} $10,000 CLP {E_GAFAS} $250,000 CLP\n\n"
-                        f"{E_FLECHA} $20,000 CLP {E_GAFAS} $420,000 CLP\n\n"
-                        f"{E_FLECHA} $30,000 CLP {E_GAFAS} $600,000 CLP\n\n"
-                        f"{E_FLECHA} $50,000 CLP {E_GAFAS} $750,000 CLP\n\n"
-                        f"{E_FLECHA} $100,000 CLP {E_GAFAS} $1,590,000 CLP\n\n\n"
-                        f"{E_ESTRELLA} <b>Si deseas hacer una inversión más alta, te daré la información al instante.</b> {E_DIAMANTE}"
-                    )
-                elif moneda == "VES":
-                    texto_inversion = (
-                        f"{E_ESTRELLA} <b>¡Bienvenidos a la nueva oportunidad de inversión!</b> {E_REGALO}\n\n"
-                        f"{E_DIAMANTE} <b>Aquí puedes empezar desde solo Bs. 400 y ver crecer tu ganancia hasta x25.</b>\n\n"
-                        f"{E_COHETE} <b>¡Tú eliges cuánto invertir y nosotros te guiamos en el proceso!</b>\n\n\n"
-                        f"{E_BOLSA} <b>TABLA DE INVERSIÓN Y GANANCIA (VENEZUELA)</b> {E_BOLSA}\n\n"
-                        f"{E_FLECHA} Bs. 400 {E_GAFAS} Bs. 10,000\n\n"
-                        f"{E_FLECHA} Bs. 800 {E_GAFAS} Bs. 16,800\n\n"
-                        f"{E_FLECHA} Bs. 1,200 {E_GAFAS} Bs. 24,000\n\n"
-                        f"{E_FLECHA} Bs. 2,000 {E_GAFAS} Bs. 30,000\n\n"
-                        f"{E_FLECHA} Bs. 4,000 {E_GAFAS} Bs. 63,600\n\n\n"
-                        f"{E_ESTRELLA} <b>Si deseas hacer una inversión más alta, te daré la información al instante.</b> {E_DIAMANTE}"
-                    )
-                elif moneda == "USDC":
-                    texto_inversion = (
-                        f"{E_ESTRELLA} <b>¡Bienvenidos a la nueva oportunidad de inversión!</b> {E_REGALO}\n\n"
-                        f"{E_DIAMANTE} <b>Aquí puedes empezar desde solo $10 USDC y ver crecer tu ganancia hasta x25.</b>\n\n"
-                        f"{E_COHETE} <b>¡Tú eliges cuánto invertir y nosotros te guiamos en el proceso!</b>\n\n\n"
-                        f"{E_BOLSA} <b>TABLA DE INVERSIÓN Y GANANCIA (USDC)</b> {E_BOLSA}\n\n"
-                        f"{E_FLECHA} $10 USDC {E_GAFAS} $250 USDC\n\n"
-                        f"{E_FLECHA} $20 USDC {E_GAFAS} $420 USDC\n\n"
-                        f"{E_FLECHA} $30 USDC {E_GAFAS} $600 USDC\n\n"
-                        f"{E_FLECHA} $50 USDC {E_GAFAS} $750 USDC\n\n"
-                        f"{E_FLECHA} $100 USDC {E_GAFAS} $1,590 USDC\n\n\n"
-                        f"{E_ESTRELLA} <b>Si deseas hacer una inversión más alta, te daré la información al instante.</b> {E_DIAMANTE}"
-                    )
-                else:
-                    texto_inversion = (
-                        f"{E_ESTRELLA} <b>¡Bienvenidos a la nueva oportunidad de inversión!</b> {E_REGALO}\n\n"
-                        f"{E_DIAMANTE} <b>Aquí puedes empezar desde solo $10 USD y ver crecer tu ganancia hasta x25.</b>\n\n"
-                        f"{E_COHETE} <b>¡Tú eliges cuánto invertir y nosotros te guiamos en el proceso!</b>\n\n\n"
-                        f"{E_BOLSA} <b>TABLA DE INVERSIÓN Y GANANCIA (USD)</b> {E_BOLSA}\n\n"
-                        f"{E_FLECHA} $10 USD {E_GAFAS} $250 USD\n\n"
-                        f"{E_FLECHA} $20 USD {E_GAFAS} $420 USD\n\n"
-                        f"{E_FLECHA} $30 USD {E_GAFAS} $600 USD\n\n"
-                        f"{E_FLECHA} $50 USD {E_GAFAS} $750 USD\n\n"
-                        f"{E_FLECHA} $100 USD {E_GAFAS} $1,590 USD\n\n\n"
-                        f"{E_ESTRELLA} <b>Si deseas hacer una inversión más alta, te daré la información al instante.</b> {E_DIAMANTE}"
-                    )
+                    # ==========================================
+                    # FASE 3: Tras confirmar recarga ➡️ Términos y Condiciones
+                    # ==========================================
+                    elif fase_actual == 3:
+                        async for message in client.iter_messages(dialog.entity, limit=1):
+                            if message and message.text and not message.out:
+                                clientes_atendidos[user_id_str]["fase"] = 4
+                                guardar_registro_clientes()
 
-                await event.respond(texto_inversion, parse_mode='html')
-                print(f"✨ Tabla de inversión en '{moneda}' enviada con éxito.")
+                                texto_terminos = (
+                                    f"{E_BOLSA} <b>OK, COMÉNTAME SI ESTÁS</b> {E_REGALO} "
+                                    f"<b>TOTALMENTE DE ACUERDO CON LOS</b> {E_FLECHA} <b>TÉRMINOS Y CONDICIONES, ES</b> {E_ADN1} "
+                                    f"<b>DECIR 40% DE LAS GANANCIAS</b> {E_ESTRELLA} <b>PARA TI 60% PARA NOSOTROS SI</b> {E_FLECHA} "
+                                    f"<b>ESTÁS TOTALMENTE DE ACUERDO</b> {E_BOLSA} <b>POR FAVOR ME CONFIRMAS. GRACIAS</b> {E_REGALO}"
+                                )
+                                await client.send_message(dialog.entity, texto_terminos, parse_mode='html')
+                                print(f"✨ Mensaje de términos y condiciones enviado a: {username or user_id_str}")
+                                break
 
-        # ==========================================
-        # Fase 3: Tras ver la tabla, detectamos el valor de inversión mencionado ➡️ Mensaje de recarga
-        # ==========================================
-        elif fase_actual == 3:
-            if not event.out:
-                if any(char.isdigit() for char in texto_cliente):
-                    clientes_atendidos[user_id_str]["fase"] = 4
-                    guardar_registro_clientes()
+                    # ==========================================
+                    # FASE 4: Tras aceptar términos ➡️ Pedir Usuario y Contraseña
+                    # ==========================================
+                    elif fase_actual == 4:
+                        async for message in client.iter_messages(dialog.entity, limit=1):
+                            if message and message.text and not message.out:
+                                clientes_atendidos[user_id_str]["fase"] = 5
+                                guardar_registro_clientes()
 
-                    print(f"💰 Valor de inversión seleccionado: '{texto_cliente}'. Enviando mensaje de recarga...")
+                                texto_conexion = (
+                                    f"{E_BOLSA} <b>OK PERFECTO MUY BIEN, POR</b> {E_BOLSA} "
+                                    f"<b>FAVOR ENVÍAME USUARIO Y</b> {E_BOLSA} "
+                                    f"<b>CONTRASEÑA PARA PROCEDER A</b> {E_COHETE}{E_DIAMANTE} <b>CONECTAR TU CUENTA</b> {E_BOLSA} "
+                                    f"<b>DIRECTAMENTE AL SERVIDOR Y</b> {E_ADN1} "
+                                    f"<b>ASIMISMO PODER COMENZAR A</b> {E_BOLSA} "
+                                    f"<b>INCREMENTAR TUS GANANCIAS POR FAVOR QUEDO ATENTO</b> {E_ADN2}"
+                                )
+                                await client.send_message(dialog.entity, texto_conexion, parse_mode='html')
+                                print(f"✨ Solicitud de usuario y contraseña enviada a: {username or user_id_str}")
+                                break
 
-                    texto_recarga = (
-                        f"{E_REGALO} <b>OK PERFECTO MUY BIEN…</b> {E_REGALO} "
-                        f"{E_DIVISAS} <b>PROCEDE A RECARGAR TU CUENTA</b> {E_ADN1} <b>DE JUEGO, CON LA INVERSIÓN QUE</b> {E_DIAMANTE} <b>DESEA HACER CUANDO</b> {E_FLECHA} <b>RECARGUES TU CUENTA DE JUEGO</b> {E_ESTRELLA} "
-                        f"<b>ME CONFIRMAS PARA NOTIFICARTE</b> {E_BOLSA} <b>LOS SIGUIENTES PASOS A SEGUIR.</b> {E_COHETE} <b>QUEDO ATENTO. MUCHAS GRACIAS</b> {E_REGALO}"
-                    )
-                    await event.respond(texto_recarga, parse_mode='html')
-                    print(f"✨ Mensaje de recarga enviado con éxito.")
+                    # ==========================================
+                    # FASE 5: Bifurcación (Datos vs Audio de Dudas de AUDIO DUDA)
+                    # ==========================================
+                    elif fase_actual == 5:
+                        async for message in client.iter_messages(dialog.entity, limit=1):
+                            if message and message.text and not message.out:
+                                texto_cliente = message.text.lower()
 
-        # ==========================================
-        # Fase 4: Al confirmar recarga ➡️ Enviar términos y condiciones (40% - 60%)
-        # ==========================================
-        elif fase_actual == 4:
-            if not event.out:
-                coincide_recarga_lista = any(p in texto_cliente for p in palabras_recarga_lista)
-                if coincide_recarga_lista or "ya" in texto_cliente or "listo" in texto_cliente or "recarg" in texto_cliente:
-                    clientes_atendidos[user_id_str]["fase"] = 5
-                    guardar_registro_clientes()
+                                tiene_duda = any(palabra in texto_cliente for palabra in palabras_duda)
 
-                    print(f"📩 Confirmación de recarga detectada. Enviando términos y condiciones...")
+                                if tiene_duda:
+                                    print(f"⚠️ Duda o negativa detectada en ({username or user_id_str}). Enviando nota de voz desde AUDIO DUDA...")
+                                    audio_duda_enviado = False
+                                    if os.path.exists(CARPETA_AUDIO_DUDA):
+                                        for archivo in os.listdir(CARPETA_AUDIO_DUDA):
+                                            if archivo.lower().endswith(('.ogg', '.mp3', '.m4a', '.wav', '.oga')):
+                                                ruta_completa = os.path.join(CARPETA_AUDIO_DUDA, archivo)
+                                                await client.send_file(dialog.entity, ruta_completa, voice_note=True)
+                                                print(f"🎤 Nota de voz de duda ({archivo}) enviada con éxito.")
+                                                audio_duda_enviado = True
+                                                break
+                                    if not audio_duda_enviado:
+                                        print(f"⚠️ [Aviso] No se encontró audio en '{CARPETA_AUDIO_DUDA}'.")
+                                    break
 
-                    texto_terminos = (
-                        f"{E_ADN1} <b>OK, COMÉNTAME SI ESTÁS</b> {E_ESTRELLA} <b>TOTALMENTE</b> {E_GAFAS} <b>DE ACUERDO CON LOS TÉRMINOS Y CONDICIONES, ES DECIR</b> {E_DIAMANTE} <b>40% DE LAS GANANCIAS</b> {E_PULGAR} <b>PARA TI 60% PARA NOSOTROS SI ESTÁS TOTALMENTE DE ACUERDO POR FAVOR ME CONFIRMAS. GRACIAS</b> {E_FLECHA}"
-                    )
-                    await event.respond(texto_terminos, parse_mode='html')
-                    print(f"✨ Mensaje de términos y condiciones enviado con éxito.")
+                                es_correo = any(dominio in texto_cliente for dominio in dominios_correo)
+                                parece_credenciales = len(texto_cliente.split()) >= 2 or es_correo or len(texto_cliente) > 6
 
-        # ==========================================
-        # Fase 5: Al confirmar acuerdo con términos ➡️ Pedir usuario y contraseña
-        # ==========================================
-        elif fase_actual == 5:
-            if not event.out:
-                coincide_acuerdo = any(p in texto_cliente for p in palabras_acuerdo_terminos) or "acuerdo" in texto_cliente or "si" in texto_cliente or "confirmo" in texto_cliente
-                if coincide_acuerdo:
-                    clientes_atendidos[user_id_str]["fase"] = 6
-                    guardar_registro_clientes()
+                                if parece_credenciales:
+                                    clientes_atendidos[user_id_str]["fase"] = 6
+                                    guardar_registro_clientes()
 
-                    print(f"📩 Acuerdo con términos detectado de ({username or user_id_str}). Solicitando usuario y contraseña...")
-
-                    texto_credenciales = (
-                        f"{E_ADN1} <b>OK PERFECTO MUY BIEN, POR</b> {E_PULGAR} <b>FAVOR ENVÍAME USUARIO Y CONTRASEÑA PARA PROCEDER A</b> {E_GAFAS} <b>CONECTAR TU CUENTA DIRECTAMENTE</b> {E_DIAMANTE} <b>AL SERVIDOR Y ASIMISMO PODER COMENZAR A INCREMENTAR TUS GANANCIAS POR FAVOR</b> {E_ESTRELLA} <b>QUEDO ATENTO</b> {E_COHETE}"
-                    )
-                    await event.respond(texto_credenciales, parse_mode='html')
-                    print(f"✨ Mensaje de solicitud de credenciales enviado con éxito.")
-
-        # ==========================================
-        # Fase 6: Recibir usuario y contraseña (validando correo electrónico) ➡️ Enviar aviso de cuenta desconectada
-        # ==========================================
-        elif fase_actual == 6:
-            if not event.out:
-                if "@" in texto_cliente and any(dom in texto_cliente for dom in ["gmail", "hotmail", "outlook", "yahoo", "icloud", "live", "msn"]):
-                    clientes_atendidos[user_id_str]["fase"] = 7
-                    guardar_registro_clientes()
-
-                    print(f"📩 Credenciales (correo) recibidas de ({username or user_id_str}). Enviando aviso de desconexión...")
-
-                    texto_desconexion = (
-                        f"{E_PULGAR} <b>PERFECTO, EN EL MOMENTO QUE NOSOTROS NOS ENCONTRAMOS</b> {E_ADN1} <b>INCREMENTADOS DE SALDO DE UNA MANERA SEGURA Y CONFIABLE NECESITO QUE</b> {E_DIAMANTE} <b>MANTENGAS TU CUENTA DESCONECTADA Y NO INICIA</b> {E_ESTRELLA} <b>SESIÓN PARA NO PRESENTAR INCONVENIENTES CON EL SERVIDOR A MEDIDA DE ESTAR</b> {E_GAFAS} <b>INCREMENTANDO TU SALDO TE VAMOS A ESTAR</b> {E_COHETE} <b>ENVIANDO FOTO Y VIDEO DE LAS GANANCIAS QUE ESTEMOS INCREMENTANDO. GRACIAS ASÍ QUE POR</b> {E_REGALO} <b>FAVOR CUANDO DESCONECTES TU CUENTA ME CONFIRMAS PARA PODER COMENZAR.</b> {E_BOLSA}{E_DIVISAS}"
-                    )
-                    await event.respond(texto_desconexion, parse_mode='html')
-                    print(f"✨ Mensaje de aviso de cuenta desconectada enviado con éxito.")
-                else:
-                    print(f"⏳ Esperando que el usuario envíe un correo electrónico válido con su contraseña...")
-
-    except Exception as e:
-        print(f"⚠️ Error procesando mensaje privado: {e}")
+                                    texto_saldo = (
+                                        f"{E_ADN1} <b>PERFECTO, EN EL MOMENTO QUE</b> {E_BOLSA} "
+                                        f"<b>NOSOTROS NOS ENCONTRAMOS INCREMENTADOS DE SALDO DE UNA</b> {E_ADN1} "
+                                        f"<b>MANERA SEGURA Y CONFIABLE NECESITO QUE MANTENGAS TU CUENTA DESCONECTADA Y NO INICIA</b> {E_ESTRELLA} "
+                                        f"<b>SESIÓN PARA NO PRESENTAR INCONVENIENTES CON</b> {E_ADN1} "
+                                        f"<b>EL SERVIDOR A</b> {E_COHETE} "
+                                        f"<b>MEDIDA DE ESTAR INCREMENTANDO TU SALDO TE VAMOS A ESTAR ENVIANDO FOTO Y VIDEO DE LAS</b> {E_REGALO} "
+                                        f"<b>GANANCIAS</b> {E_BOLSA} <b>QUE ESTEMOS INCREMENTANDO. GRACIAS ASÍ QUE POR FAVOR CUANDO DESCONECTES TU CUENTA ME CONFIRMAS PARA PODER COMENZAR.</b> {E_BOLSA}"
+                                    )
+                                    await client.send_message(dialog.entity, texto_saldo, parse_mode='html')
+                                    print(f"✨ Instrucciones de cuenta desconectada enviadas a: {username or user_id_str}")
+                                    break
+        except Exception as e:
+            print(f"⚠️ Error en el escáner privado: {e}")
+        
+        await asyncio.sleep(4)
 
 async def main():
-    print("🚀 ASISTENTE PRIVADO ACTIVO - CREDENCIALES API ACTUALIZADAS")
-    await client.run_until_disconnected()
+    await client.start()
+    print("🚀 ASISTENTE PRIVADO ACTIVO - BIENVENIDA PREMIUM SIN EMOJIS NORMALES")
+    await asyncio.gather(
+        tarea_escanear_mensajes_privados()
+    )
 
 if __name__ == '__main__':
     while True:
